@@ -23,7 +23,9 @@ private:
 template <class T>
 class shared_ptr {
 public:
-    explicit shared_ptr(T *t = nullptr) : ptr(t), counter(new RefCounter(t != nullptr)) {
+    explicit shared_ptr() : ptr(nullptr), counter(nullptr) {}
+
+    explicit shared_ptr(T *t) : ptr(t), counter(new RefCounter(1)) {
         std::cout << "constructor\n";
     }
 
@@ -47,7 +49,9 @@ public:
     ~shared_ptr() {
         counter->ReleaseRef();
         if (!counter->Get()) {
-            delete ptr;
+            if (ptr != nullptr) {
+                delete ptr;
+            }
             delete counter;
         }
     }
@@ -70,6 +74,7 @@ private:
 };
 
 int main() {
-    shared_ptr<int> sh4 = shared_ptr<int>(new int(10));
+    shared_ptr<int> sh4;
+    sh4 = shared_ptr<int>(new int(10));
     std::cout << *sh4 << "\n";
 }
