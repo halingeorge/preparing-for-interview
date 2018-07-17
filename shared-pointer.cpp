@@ -23,33 +23,25 @@ private:
 template <class T>
 class shared_ptr {
 public:
-    shared_ptr(T *t = nullptr) : ptr(t), counter(new RefCounter(t != nullptr)) {}
-
-    shared_ptr(shared_ptr &t) {
-        if (this != &ptr) {
-            ptr = t.ptr;
-            counter = t.counter;
-            counter->AddRef();
-        }
+    explicit shared_ptr(T *t = nullptr) : ptr(t), counter(new RefCounter(t != nullptr)) {
+        std::cout << "constructor\n";
     }
 
-    shared_ptr(shared_ptr &&t) {
+    shared_ptr(const shared_ptr &t) {
+        std::cout << "copy constructor\n";
         ptr = t.ptr;
         counter = t.counter;
+        counter->AddRef();
     }
 
-    shared_ptr& operator=(shared_ptr &t) {
-        if (this != &t) {
-            counter->ReleaseRef();
-            if (!counter->Get()) {
-                delete ptr;
-                delete counter;
-            }
+    shared_ptr(shared_ptr &&t) : ptr(std::move(t.ptr)), counter(std::move(t.counter)) {
+        std::cout << "move constructor\n";
+    }
 
-            ptr = t.ptr;
-            counter = t.counter;
-            counter->AddRef();
-        }
+    shared_ptr& operator=(shared_ptr t)  {
+        std::cout << "operator=\n";
+        std::swap(ptr, t.ptr);
+        std::swap(counter, t.counter);
     }
 
     ~shared_ptr() {
@@ -60,32 +52,24 @@ public:
         }
     }
 
+    int use_count() const {
+        return counter->Get();
+    }
+
+    T* operator->() {
+        return ptr;
+    }
+
+    T operator*() {
+        return *ptr;
+    }
+
 private:
     T *ptr;
     RefCounter *counter;
 };
 
-struct Foo {
-    Foo() { std::cout << "Foo...\n"; }
-    ~Foo() { std::cout << "~Foo...\n"; }
-};
-
-struct D {
-    void operator()(Foo* p) const {
-        std::cout << "Call delete for Foo object...\n";
-        delete p;
-    }
-};
-
 int main() {
-    std::shared_ptr<Foo> sh1;
-
-    // constructor with object
-    std::shared_ptr<Foo> sh2(new Foo);
-    std::shared_ptr<Foo> sh3(sh2);
-    std::cout << sh2.use_count() << '\n';
-    std::cout << sh3.use_count() << '\n';
-
-    //constructor with object and deleter
-    std::shared_ptr<Foo> sh4(new Foo, D());
+    shared_ptr<int> sh4 = shared_ptr<int>(new int(10));
+    std::cout << *sh4 << "\n";
 }
