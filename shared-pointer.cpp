@@ -2,38 +2,54 @@
 
 class RefCounter {
 public:
-    RefCounter(int counter = 0) : counter(counter) {}
+    RefCounter() : counter(nullptr) {}
+    RefCounter(int counter = 0) : counter(new int(counter)) {}
+
+    void swap(RefCounter &t) {
+        std::swap(counter, t.counter);
+    }
 
     void AddRef() {
-        ++counter;
+        ++(*counter);
     }
 
     void ReleaseRef() {
-        --counter;
+        --(*counter);
     }
 
     int Get() const {
-        return counter;
+        return *counter;
+    }
+
+    ~RefCounter() {
+        if (counter != nullptr) {
+            delete counter;
+        }
     }
 
 private:
-    int counter;
+    int *counter;
 };
 
 template <class T>
 class shared_ptr {
 public:
-    explicit shared_ptr() : ptr(nullptr), counter(nullptr) {}
+    explicit shared_ptr() : ptr(nullptr), counter(RefCounter(0)) {}
 
-    explicit shared_ptr(T *t) : ptr(t), counter(new RefCounter(1)) {
+    explicit shared_ptr(T *t) : ptr(t), counter(RefCounter(1)) {
         std::cout << "constructor\n";
+    }
+
+    void swap(shared_ptr &t) {
+        std::swap(ptr, t.ptr);
+        counter.swap(t.counter);
     }
 
     shared_ptr(const shared_ptr &t) {
         std::cout << "copy constructor\n";
         ptr = t.ptr;
         counter = t.counter;
-        counter->AddRef();
+        counter.AddRef();
     }
 
     shared_ptr(shared_ptr &&t) : ptr(std::move(t.ptr)), counter(std::move(t.counter)) {
@@ -42,22 +58,20 @@ public:
 
     shared_ptr& operator=(shared_ptr t)  {
         std::cout << "operator=\n";
-        std::swap(ptr, t.ptr);
-        std::swap(counter, t.counter);
+        swap(t);
     }
 
     ~shared_ptr() {
-        counter->ReleaseRef();
-        if (!counter->Get()) {
+        counter.ReleaseRef();
+        if (!counter.Get()) {
             if (ptr != nullptr) {
                 delete ptr;
             }
-            delete counter;
         }
     }
 
     int use_count() const {
-        return counter->Get();
+        return counter.Get();
     }
 
     T* operator->() {
@@ -70,7 +84,7 @@ public:
 
 private:
     T *ptr;
-    RefCounter *counter;
+    RefCounter counter;
 };
 
 int main() {
